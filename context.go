@@ -8,6 +8,7 @@ type ctxKey int
 
 const (
 	nosurfKey ctxKey = iota
+	sid = "sid"
 )
 
 type csrfContext struct {
@@ -47,7 +48,7 @@ func ctxClear(_ *http.Request) {
 
 func ctxSetToken(req *http.Request, token []byte) {
 	ctx := req.Context().Value(nosurfKey).(*csrfContext)
-	ctx.token = b64encode(maskToken(token))
+	ctx.token = b64encode(maskToken(getSID(req),token))
 }
 
 func ctxSetReason(req *http.Request, reason error) {

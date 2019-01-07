@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net/http"
 )
 
 const (
@@ -69,15 +70,13 @@ func VerifyToken(realToken, sentToken string) bool {
 	return subtle.ConstantTimeCompare(r, s) == 1
 }
 
-func verifyToken(realToken, sentToken []byte) bool {
+func verifyToken(realToken, sentToken []byte, sid string) bool {
 	realN := len(realToken)
 	sentN := len(sentToken)
 
-	// sentN == tokenLength means the token is unmasked
-	// sentN == 2*tokenLength means the token is masked.
-
-	if realN == tokenLength && sentN == 2*tokenLength {
-		return verifyMasked(realToken, sentToken)
+	if realN == tokenLength && sentN == tokenLength {
+		//return verifyMasked(realToken, sentToken)
+		return subtle.ConstantTimeCompare(maskToken(sid, realToken), sentToken) == 1
 	}
 	return false
 }
@@ -97,6 +96,15 @@ func checkForPRNG() {
 	if err != nil {
 		panic(fmt.Sprintf("crypto/rand is unavailable: Read() failed with %#v", err))
 	}
+}
+
+func getSID(r *http.Request) string {
+	for _, cookie := range r.Cookies() {
+		if cookie.Name == sid {
+			return cookie.Value
+		}
+	}
+	return ""
 }
 
 func init() {

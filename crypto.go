@@ -1,8 +1,7 @@
 package nosurf
 
 import (
-	"crypto/rand"
-	"io"
+	"crypto/sha256"
 )
 
 // Masks/unmasks the given data *in place*
@@ -19,30 +18,26 @@ func oneTimePad(data, key []byte) {
 	}
 }
 
-func maskToken(data []byte) []byte {
-	if len(data) != tokenLength {
+func maskToken(id string, data []byte) []byte {
+	if len(data) != tokenLength || len(id) == 0 {
 		return nil
 	}
 
 	// tokenLength*2 == len(enckey + token)
-	result := make([]byte, 2*tokenLength)
-	// the first half of the result is the OTP
-	// the second half is the masked token itself
-	key := result[:tokenLength]
-	token := result[tokenLength:]
-	copy(token, data)
-
-	// generate the random token
-	if _, err := io.ReadFull(rand.Reader, key); err != nil {
-		panic(err)
+	result := make([]byte, tokenLength)
+	shaToken := sha256.Sum256([]byte(id))
+	//shift 1 bit
+	for i := 0; i < len(shaToken);i++  {
+		shaToken[i] = shaToken[i] << 1
 	}
+	copy(result, shaToken[:])
 
-	oneTimePad(token, key)
+	oneTimePad(result, data)
 	return result
 }
 
 func unmaskToken(data []byte) []byte {
-	if len(data) != tokenLength*2 {
+	if len(data) != tokenLength {
 		return nil
 	}
 
